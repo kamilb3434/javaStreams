@@ -1,0 +1,19 @@
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
+
+public class ZapisDoPliku {
+
+    public static void zapiszAsync(List<String> dane, String sciezka) {
+        new Thread(() -> {
+            try (FileWriter writer = new FileWriter(sciezka)) {
+                for (String linia : dane) {
+                    writer.write(linia + System.lineSeparator());
+                }
+                System.out.println("✅ Zakończono zapis do pliku.");
+            } catch (IOException e) {
+                System.out.println("❌ Błąd zapisu: " + e.getMessage());
+            }
+        }).start();
+    }
+}
