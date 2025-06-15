@@ -1,0 +1,180 @@
+int nowaWaga = calkowitaWagaProduktowNaLiscie() + produkt.getCalkowitaWaga();
+To powoduje, że kompilator będzie rzucał błędem, bo nie wie, co to za metoda.
+
+🔧 Co trzeba zrobić?
+Zamień wywołanie calkowitaWagaProduktowNaLiscie() na istniejącą metodę sumaWag(), która już jest zaimplementowana i robi dokładnie to, co trzeba:
+
+java
+Kopiuj
+Edytuj
+int nowaWaga = sumaWag() + produkt.getCalkowitaWaga();
+Albo jeśli chcesz, możesz dodać metodę calkowitaWagaProduktowNaLiscie() jako alias dla sumaWag() – np.:
+
+java
+Kopiuj
+Edytuj
+public int calkowitaWagaProduktowNaLiscie() {
+    return sumaWag();
+}
+Ale to totalnie niepotrzebne – sumaWag() mówi wszystko. Po co mnożyć byty ponad potrzebę 😄
+
+Chcesz, żebym od razu poprawił to w kodzie?
+
+
+
+
+
+
+Powiedziałeś(-aś):
+dobra na podstawie tego co sie uczylismy daj mi wszystko co musze wiedzeic o strumieniach w Javie
+
+
+ChatGPT powiedział:
+Świetnie, oto konkretna piguła wiedzy o strumieniach (Streams) w Javie – czyli wszystko, co trzeba wiedzieć, żeby używać ich jak profesjonalista (i zdać każdy kolos/praktykę/projekt):
+
+🔥 Czym są strumienie (Streams)?
+To narzędzie do funkcyjnego przetwarzania danych w kolekcjach (np. listach) – pozwala pisać kod:
+
+czytelny,
+
+zwięzły,
+
+bez mutacji danych,
+
+przypominający „potok operacji”.
+
+Zamiast pętli for, piszesz .stream().filter().map()...
+
+📦 Skąd się bierze strumień?
+java
+Kopiuj
+Edytuj
+List<String> lista = List.of("ala", "kot", "pies");
+Stream<String> strumien = lista.stream();
+Inne opcje:
+
+Stream.of(1, 2, 3)
+
+Arrays.stream(...)
+
+IntStream.range(0, 10)
+
+🔧 Podstawowe operacje
+🔹 filter(Predicate)
+Zostawia tylko elementy spełniające warunek:
+
+java
+Kopiuj
+Edytuj
+List<String> wynik = lista.stream()
+    .filter(s -> s.length() > 3)
+    .collect(Collectors.toList());
+🔹 map(Function)
+Zmienia elementy (np. konwersje, przekształcenia):
+
+java
+Kopiuj
+Edytuj
+List<String> wynik = lista.stream()
+    .map(s -> s.toUpperCase())
+    .collect(Collectors.toList());
+🔹 sorted() lub sorted(Comparator)
+Sortuje:
+
+java
+Kopiuj
+Edytuj
+List<Integer> wynik = List.of(5,2,9).stream()
+    .sorted()
+    .collect(Collectors.toList());
+🔹 limit(n), skip(n)
+Przycinanie:
+
+java
+Kopiuj
+Edytuj
+.stream().limit(3)
+🔹 distinct()
+Usuwa duplikaty.
+
+🔹 peek()
+Debug – do podglądu:
+
+java
+Kopiuj
+Edytuj
+.stream().peek(System.out::println)
+🎯 Terminalne operacje
+To one kończą strumień i zwracają wynik.
+
+🔸 collect(...)
+Zbiera wynik:
+
+java
+Kopiuj
+Edytuj
+List<String> wynik = stream.collect(Collectors.toList());
+Inne:
+
+toSet()
+
+joining(", ")
+
+groupingBy(...)
+
+🔸 forEach(...)
+Działa jak pętla:
+
+java
+Kopiuj
+Edytuj
+lista.stream().forEach(System.out::println);
+🔸 count(), sum(), average(), max(), min()
+java
+Kopiuj
+Edytuj
+long liczba = lista.stream().count();
+🔸 findFirst(), findAny() → Optional
+java
+Kopiuj
+Edytuj
+Optional<String> pierwszy = lista.stream()
+    .filter(s -> s.startsWith("a"))
+    .findFirst();
+🔸 anyMatch(), allMatch(), noneMatch()
+Sprawdza warunki:
+
+java
+Kopiuj
+Edytuj
+lista.stream().anyMatch(s -> s.equals("pies"));
+💥 Collectors – potężna paczka narzędzi
+Używane z .collect(...).
+
+Najważniejsze:
+
+java
+Kopiuj
+Edytuj
+Collectors.toList()
+Collectors.toSet()
+Collectors.joining(", ")
+Collectors.groupingBy(x -> x.length())
+Collectors.partitioningBy(x -> x.length() % 2 == 0)
+✅ Przykład z życia:
+java
+Kopiuj
+Edytuj
+List<String> imiona = List.of("Ala", "Bartek", "adam", "Ania");
+
+List<String> wynik = imiona.stream()
+    .map(s -> s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase()) // popraw kapitalizację
+    .sorted()
+    .collect(Collectors.toList());
+
+🧠 Wskazówki:
+Strumień można użyć tylko raz (jest „zużywalny”).
+
+map() i filter() nic nie robią bez .collect() albo .forEach().
+
+Optional to lepsze null – zawsze sprawdzaj .isPresent() albo używaj .orElse().
