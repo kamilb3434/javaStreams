@@ -1,0 +1,266 @@
+// Projekt: kolokwium-nazwisko-data
+
+package data;
+
+public abstract class Produkt {
+    private String nazwaProduktu;
+    private int waga;
+    private float cenaZaSztuke;
+
+    public Produkt(String nazwaProduktu, int waga, float cenaZaSztuke) {
+        this.nazwaProduktu = nazwaProduktu;
+        this.waga = waga;
+        this.cenaZaSztuke = cenaZaSztuke;
+    }
+
+    public String getNazwaProduktu() {
+        return nazwaProduktu;
+    }
+
+    public int getWaga() {
+        return waga;
+    }
+
+    public float getCenaZaSztuke() {
+        return cenaZaSztuke;
+    }
+}
+
+package data;
+
+public class ZakupionyProdukt extends Produkt {
+    private int liczbaSztuk;
+
+    public ZakupionyProdukt(String nazwaProduktu, int waga, float cenaZaSztuke, int liczbaSztuk) {
+        super(nazwaProduktu, waga, cenaZaSztuke);
+        this.liczbaSztuk = liczbaSztuk;
+    }
+
+    public int getLiczbaSztuk() {
+        return liczbaSztuk;
+    }
+
+    public float getWartoscZakupu() {
+        return getCenaZaSztuke() * liczbaSztuk;
+    }
+
+    public int getCalkowitaWaga() {
+        return getWaga() * liczbaSztuk;
+    }
+}
+
+// Projekt: kolokwium-nazwisko-logic
+
+package logic;
+
+import data.ZakupionyProdukt;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+public class ZakupyManager implements ZakupyInterface {
+    private final List<ZakupionyProdukt> zakupy = new ArrayList<>();
+
+    @Override
+    public void dodajProdukt(ZakupionyProdukt produkt) throws IncorrectValueException {
+        if (produkt.getNazwaProduktu() == null || produkt.getNazwaProduktu().trim().isEmpty()) {
+            throw new IncorrectValueException("Nazwa produktu nie może być pusta.");
+        }
+        if (produkt.getWaga() < 1 || produkt.getWaga() > 20) {
+            throw new IncorrectValueException("Waga jednej sztuki musi być w przedziale 1–20 kg.");
+        }
+        if (produkt.getCenaZaSztuke() < 0.01f || produkt.getCenaZaSztuke() > 1000f) {
+            throw new IncorrectValueException("Cena musi być w zakresie 0.01–1000 zł.");
+        }
+        if (produkt.getLiczbaSztuk() < 1 || produkt.getLiczbaSztuk() > 100) {
+            throw new IncorrectValueException("Liczba sztuk musi być w zakresie 1–100.");
+        }
+
+        int nowaWaga = calkowitaWagaProduktowNaLiscie() + produkt.getCalkowitaWaga();
+        if (nowaWaga > 20) {
+            throw new IncorrectValueException("Łączna waga po dodaniu przekroczyłaby 20 kg (aktualnie: " + nowaWaga + " kg).");
+        }
+
+        zakupy.add(produkt);
+    }
+
+    @Override
+    public List<ZakupionyProdukt> zwrocListeZakupow() {
+        return new ArrayList<>(zakupy);
+    }
+
+    @Override
+    public Optional<ZakupionyProdukt> znajdzProduktPoNazwie(String nazwa) {
+        return zakupy.stream()
+                .filter(p -> p.getNazwaProduktu().equalsIgnoreCase(nazwa))
+                .findFirst();
+    }
+
+    @Override
+    public Optional<ZakupionyProdukt> znajdzProduktPoIndeksie(int index) {
+        if (index >= 0 && index < zakupy.size()) {
+            return Optional.of(zakupy.get(index));
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public long liczbaProduktow() {
+        return zakupy.size();
+    }
+
+    @Override
+    public int sumaWag() {
+        return zakupy.stream()
+                .mapToInt(ZakupionyProdukt::getCalkowitaWaga)
+                .sum();
+    }
+
+    @Override
+    public float sumaWartosci() {
+        return (float) zakupy.stream()
+                .mapToDouble(ZakupionyProdukt::getWartoscZakupu)
+                .sum();
+    }
+}
+
+package logic;
+
+import data.ZakupionyProdukt;
+import java.util.List;
+import java.util.Optional;
+
+public interface ZakupyInterface {
+    void dodajProdukt(ZakupionyProdukt produkt) throws IncorrectValueException;
+    List<ZakupionyProdukt> zwrocListeZakupow();
+    Optional<ZakupionyProdukt> znajdzProduktPoNazwie(String nazwa);
+    Optional<ZakupionyProdukt> znajdzProduktPoIndeksie(int index);
+    long liczbaProduktow();
+    int sumaWag();
+    float sumaWartosci();
+}
+
+package logic;
+
+public interface FileWriterInterface<T extends data.Produkt> {
+    void zapiszListeDoPliku(List<T> produkty, String sciezka);
+}
+
+package logic;
+
+public class IncorrectValueException extends Exception {
+    public IncorrectValueException(String message) {
+        super(message);
+    }
+}
+
+package logic;
+
+import data.ZakupionyProdukt;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Comparator;
+import java.util.List;
+
+public class ZakupyFileWriter implements FileWriterInterface<ZakupionyProdukt> {
+    @Override
+    public void zapiszListeDoPliku(List<ZakupionyProdukt> produkty, String sciezka) {
+        new Thread(() -> {
+            try (FileWriter writer = new FileWriter(sciezka)) {
+                produkty.stream()
+                        .sorted(Comparator.comparing(ZakupionyProdukt::getWartoscZakupu).reversed())
+                        .forEach(p -> {
+                            try {
+                                writer.write("Produkt: " + p.getNazwaProduktu() + ", Waga: " + p.getWaga() + ", Cena: " + p.getCenaZaSztuke() + ", Liczba sztuk: " + p.getLiczbaSztuk() + ", Wartość: " + p.getWartoscZakupu() + "\n");
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+                System.out.println("Zakończono zapis do pliku.");
+            } catch (IOException e) {
+                System.out.println("Błąd podczas zapisu: " + e.getMessage());
+            }
+        }).start();
+    }
+}
+
+package app;
+
+import data.ZakupionyProdukt;
+import logic.*;
+
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        ZakupyManager manager = new ZakupyManager();
+        ZakupyFileWriter writer = new ZakupyFileWriter();
+
+        boolean running = true;
+
+        while (running) {
+            System.out.println("\n--- MENU ---");
+            System.out.println("1. Dodaj produkt");
+            System.out.println("2. Wyświetl listę produktów");
+            System.out.println("3. Szczegóły produktu po nazwie");
+            System.out.println("4. Raport");
+            System.out.println("5. Zapisz do pliku");
+            System.out.println("6. Zakończ");
+            System.out.print("Wybór: ");
+
+            int wybor = scanner.nextInt();
+            scanner.nextLine();
+
+            try {
+                switch (wybor) {
+                    case 1 -> {
+                        System.out.print("Nazwa produktu: ");
+                        String nazwa = scanner.nextLine();
+                        System.out.print("Waga produktu (kg): ");
+                        int waga = scanner.nextInt();
+                        System.out.print("Cena za sztukę: ");
+                        float cena = scanner.nextFloat();
+                        System.out.print("Liczba sztuk: ");
+                        int liczba = scanner.nextInt();
+                        scanner.nextLine();
+
+                        ZakupionyProdukt produkt = new ZakupionyProdukt(nazwa, waga, cena, liczba);
+                        manager.dodajProdukt(produkt);
+                        System.out.println("Produkt dodany.");
+                    }
+                    case 2 -> manager.zwrocListeZakupow().forEach(p ->
+                            System.out.println(p.getNazwaProduktu() + " x" + p.getLiczbaSztuk()));
+                    case 3 -> {
+                        System.out.print("Podaj nazwę produktu: ");
+                        String nazwa = scanner.nextLine();
+                        manager.znajdzProduktPoNazwie(nazwa)
+                                .ifPresentOrElse(
+                                        p -> System.out.println("Produkt: " + p.getNazwaProduktu() + ", Wartość: " + p.getWartoscZakupu()),
+                                        () -> System.out.println("Nie znaleziono produktu.")
+                                );
+                    }
+                    case 4 -> {
+                        System.out.println("Liczba produktów: " + manager.liczbaProduktow());
+                        System.out.println("Suma wag: " + manager.sumaWag() + " kg");
+                        System.out.println("Suma wartości: " + manager.sumaWartosci() + " zł");
+                    }
+                    case 5 -> {
+                        System.out.print("Podaj ścieżkę pliku: ");
+                        String sciezka = scanner.nextLine();
+                        writer.zapiszListeDoPliku(manager.zwrocListeZakupow(), sciezka);
+                    }
+                    case 6 -> {
+                        running = false;
+                        System.out.println("Zakończono program.");
+                    }
+                    default -> System.out.println("Nieprawidłowa opcja.");
+                }
+            } catch (IncorrectValueException e) {
+                System.out.println("Nie można dodać produktu: " + e.getMessage());
+            } catch (Exception e) {
+                System.out.println("Wystąpił błąd: " + e.getMessage());
+            }
+        }
+    }
+}
